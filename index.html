@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>REDJOINT Injury Dashboard</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app">
+
+    <!-- Slide 1 : Intro -->
+    <section id="slide1" class="slide active">
+        <div class="slide-content">
+            <h1 class="logo">REDJOINT</h1>
+            <p class="subtitle">Injury Risk Analytics</p>
+        </div>
+    </section>
+
+    <!-- Slide 2 : Menu -->
+    <section id="slide2" class="slide">
+        <div class="slide-content">
+            <h2>Choose a Module</h2>
+            <div class="button-row">
+                <button id="btn-history" class="primary-btn">
+                    Injury History
+                </button>
+                <button id="btn-risk" class="secondary-btn">
+                    Risk Prediction
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 3 : Injury History Input -->
+    <section id="slide3" class="slide">
+        <div class="slide-content wide">
+            <h2>Injury History</h2>
+
+            <form id="injury-form" class="form-grid">
+                <!-- Season -->
+                <div class="form-field">
+                    <label for="season">Season</label>
+                    <select id="season" required>
+                        <option value="">Select Season</option>
+                        <option value="24/25">24/25</option>
+                        <option value="23/24">23/24</option>
+                        <option value="22/23">22/23</option>
+                        <option value="21/22">21/22</option>
+                        <option value="20/21">20/21</option>
+                    </select>
+                </div>
+
+                <!-- Injury Type -->
+                <div class="form-field">
+                    <label for="injuryType">Injury Type</label>
+                    <select id="injuryType" required>
+                        <option value="">Select Injury Type</option>
+                        <option value="x">x</option>
+                        <option value="arm">arm</option>
+                        <option value="body">body</option>
+                        <option value="calf">calf</option>
+                        <option value="foot">foot</option>
+                        <option value="hamstring">hamstring</option>
+                        <option value="head">head</option>
+                        <option value="hip">hip</option>
+                        <option value="knee">knee</option>
+                        <option value="other">other</option>
+                    </select>
+                </div>
+
+                <!-- Running Time -->
+                <div class="form-field">
+                    <label for="runningTime">Running Time (minutes)</label>
+                    <input
+                        id="runningTime"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g. 90"
+                        required
+                    />
+                </div>
+
+                <!-- Fouled -->
+                <div class="form-field">
+                    <label for="fouled">Fouled (times)</label>
+                    <input
+                        id="fouled"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g. 3"
+                        required
+                    />
+                </div>
+
+                <!-- Position -->
+                <div class="form-field">
+                    <label for="position">Position</label>
+                    <select id="position" required>
+                        <option value="">Select Position</option>
+                        <option value="Goalkeeper">Goalkeeper</option>
+                        <option value="Left-Back">Left-Back</option>
+                        <option value="Centre-Back">Centre-Back</option>
+                        <option value="Right-Back">Right-Back</option>
+                        <option value="Defensive Midfield">Defensive Midfield</option>
+                        <option value="Left Midfield">Left Midfield</option>
+                        <option value="Right Midfield">Right Midfield</option>
+                        <option value="Central Midfield">Central Midfield</option>
+                        <option value="Attacking Midfield">Attacking Midfield</option>
+                        <option value="Second Striker">Second Striker</option>
+                        <option value="Left Winger">Left Winger</option>
+                        <option value="Right Winger">Right Winger</option>
+                        <option value="Centre-Forward">Centre-Forward</option>
+                    </select>
+                </div>
+
+                <!-- Enter 버튼 -->
+                <div class="form-field full">
+                    <button type="submit" class="primary-btn">
+                        Enter
+                    </button>
+                </div>
+            </form>
+
+            <!-- 누적 데이터 테이블 -->
+            <div class="table-wrapper">
+                <table id="injury-table">
+                    <thead>
+                    <tr>
+                        <th>X</th>
+                        <th>Season</th>
+                        <th>Injury Type</th>
+                        <th>Running Time</th>
+                        <th>Fouled</th>
+                        <th>Position</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- JS로 행을 채움 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 뒤로가기 버튼 (옵션) -->
+            <div class="bottom-row">
+                <button id="back-to-menu" class="ghost-btn">
+                    Back to Menu
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 4 : Risk Prediction (placeholder) -->
+    <section id="slide4" class="slide">
+        <div class="slide-content">
+            <h2>Risk Prediction</h2>
+            <p>여기는 나중에 모델 결과/시각화 들어가는 영역.</p>
+            <button id="back-from-risk" class="ghost-btn">
+                Back to Menu
+            </button>
+        </div>
+    </section>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const slides = document.querySelectorAll(".slide");
+
+    function showSlide(id) {
+        slides.forEach((s) => s.classList.remove("active"));
+        const target = document.getElementById(id);
+        if (target) target.classList.add("active");
+    }
+
+    // 1) 첫 슬라이드 2초 후 자동으로 두 번째 슬라이드로
+    setTimeout(function () {
+        showSlide("slide2");
+    }, 3000);
+
+    // 2) 두 번째 슬라이드 버튼 → 3, 4번 슬라이드
+    const btnHistory = document.getElementById("btn-history");
+    const btnRisk = document.getElementById("btn-risk");
+    const backToMenu = document.getElementById("back-to-menu");
+    const backFromRisk = document.getElementById("back-from-risk");
+
+    btnHistory.addEventListener("click", function () {
+        showSlide("slide3");
+    });
+
+    btnRisk.addEventListener("click", function () {
+        showSlide("slide4");
+    });
+
+    backToMenu.addEventListener("click", function () {
+        showSlide("slide2");
+    });
+
+    backFromRisk.addEventListener("click", function () {
+        showSlide("slide2");
+    });
+
+    // 3) 세 번째 슬라이드 - 입력/누적/삭제 로직
+    const form = document.getElementById("injury-form");
+    const tableBody = document.querySelector("#injury-table tbody");
+
+    // Enter 눌렀을 때 (form submit)
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const season = document.getElementById("season").value.trim();
+        const injuryType = document.getElementById("injuryType").value.trim();
+        const runningTime = document.getElementById("runningTime").value.trim();
+        const fouled = document.getElementById("fouled").value.trim();
+        const position = document.getElementById("position").value.trim();
+
+        // 간단한 유효성 검사
+        if (!season || !injuryType || !runningTime || !fouled || !position) {
+            alert("모든 값을 입력/선택해주세요.");
+            return;
+        }
+
+        const key = [
+            season,
+            injuryType,
+            runningTime,
+            fouled,
+            position,
+        ].join("|");
+
+        // same 체크: 기존 행 중에 동일 key가 있으면 same
+        const rows = tableBody.querySelectorAll("tr");
+        for (const row of rows) {
+            if (row.dataset.key === key) {
+                alert("same");
+                return;
+            }
+        }
+
+        // 새 행 추가
+        const tr = document.createElement("tr");
+        tr.dataset.key = key;
+
+        // X 버튼 셀
+        const tdX = document.createElement("td");
+        const xBtn = document.createElement("button");
+        xBtn.type = "button";
+        xBtn.textContent = "x";
+        xBtn.className = "delete-row-btn";
+        tdX.appendChild(xBtn);
+        tr.appendChild(tdX);
+
+        // Season
+        const tdSeason = document.createElement("td");
+        tdSeason.textContent = season;
+        tr.appendChild(tdSeason);
+
+        // Injury Type
+        const tdInjury = document.createElement("td");
+        tdInjury.textContent = injuryType;
+        tr.appendChild(tdInjury);
+
+        // Running Time
+        const tdRun = document.createElement("td");
+        tdRun.textContent = runningTime;
+        tr.appendChild(tdRun);
+
+        // Fouled
+        const tdFouled = document.createElement("td");
+        tdFouled.textContent = fouled;
+        tr.appendChild(tdFouled);
+
+        // Position
+        const tdPos = document.createElement("td");
+        tdPos.textContent = position;
+        tr.appendChild(tdPos);
+
+        tableBody.appendChild(tr);
+
+        // 입력값 초기화 (시간/파울만 비워도 되고, 전부 초기화해도 됨)
+        document.getElementById("runningTime").value = "";
+        document.getElementById("fouled").value = "";
+    });
+
+    // 7) X 버튼 눌렀을 때 행 삭제 (아래 행들이 자동으로 끌려 올라옴)
+    tableBody.addEventListener("click", function (e) {
+        if (e.target.classList.contains("delete-row-btn")) {
+            const row = e.target.closest("tr");
+            if (row) {
+                row.remove();
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>
+
