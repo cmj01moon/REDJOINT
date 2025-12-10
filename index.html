@@ -455,7 +455,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ======== 아바타 색칠 함수 ========
 
     const riskOutput = document.getElementById("risk-output");
-    const API_BASE = "http://127.0.0.1:8000"; // 로컬 테스트용
+    const API_BASE = "https://redjoint-backend.onrender.com"; // 로컬 테스트용
 
     function probToColor(p) {
         const clamped = Math.max(0, Math.min(1, p));
@@ -605,3 +605,4 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 </body>
 </html>
+
