@@ -4,6 +4,39 @@
     <meta charset="UTF-8" />
     <title>REDJOINT Injury Dashboard</title>
     <link rel="stylesheet" href="css/style.css" />
+    <style>
+        /* 아바타/결과 레이아웃 */
+        .risk-layout {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+            justify-content: center;   /* 가운데 정렬 */
+            flex-wrap: nowrap;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 32px 0;
+        }
+        .avatar-wrapper {
+            flex: 0 0 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .avatar-legend {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #ccc;
+            text-align: center;
+        }
+        .risk-text {
+            flex: 0 0 280px;
+            font-size: 14px;
+        }
+        /* slide4는 조금 더 길게 */
+        #slide4 .slide-content {
+            min-height: 520px;
+        }
+    </style>
 </head>
 <body>
 <div class="app">
@@ -170,23 +203,67 @@
                 </table>
             </div>
 
-            <!-- 뒤로가기 버튼 -->
+            <!-- 아래 버튼: 메뉴 / 예측 -->
             <div class="bottom-row">
                 <button id="back-to-menu" class="ghost-btn">
                     Back to Menu
+                </button>
+                <button id="btn-predict" class="primary-btn" disabled>
+                    Predict 25/26 Risk
                 </button>
             </div>
         </div>
     </section>
 
-    <!-- Slide 4 : Risk Prediction (placeholder) -->
+    <!-- Slide 4 : Risk Prediction + Avatar -->
     <section id="slide4" class="slide">
         <div class="slide-content">
             <h2>Risk Prediction</h2>
-            <p>여기는 나중에 모델 결과/시각화 들어가는 영역.</p>
-            <button id="back-from-risk" class="ghost-btn">
-                Back to Menu
-            </button>
+
+            <div class="risk-layout">
+                <!-- 아바타 -->
+                <div class="avatar-wrapper">
+                    <svg id="injury-avatar" width="220" height="450" viewBox="0 0 200 400">
+                        <!-- 몸 윤곽 (연한 회색) -->
+                        <rect x="90" y="60" width="20" height="80" fill="#222" stroke="#555" />
+                        <!-- Head -->
+                        <circle id="avatar-head" cx="100" cy="30" r="20" fill="#333" />
+                        <!-- Body / Chest -->
+                        <rect id="avatar-body" x="80" y="50" width="40" height="70" rx="10" fill="#333" />
+                        <!-- Hip/Pelvis -->
+                        <rect id="avatar-hip" x="80" y="120" width="40" height="30" rx="8" fill="#333" />
+                        <!-- Arms -->
+                        <rect id="avatar-arm-left"  x="50" y="60" width="20" height="70" rx="8" fill="#333" />
+                        <rect id="avatar-arm-right" x="130" y="60" width="20" height="70" rx="8" fill="#333" />
+                        <!-- Hamstring / Thighs -->
+                        <rect id="avatar-hamstring-left"  x="80" y="150" width="14" height="60" rx="6" fill="#333" />
+                        <rect id="avatar-hamstring-right" x="106" y="150" width="14" height="60" rx="6" fill="#333" />
+                        <!-- Knees -->
+                        <rect id="avatar-knee-left"  x="80" y="210" width="14" height="20" rx="4" fill="#333" />
+                        <rect id="avatar-knee-right" x="106" y="210" width="14" height="20" rx="4" fill="#333" />
+                        <!-- Calf -->
+                        <rect id="avatar-calf-left"  x="80" y="230" width="14" height="50" rx="5" fill="#333" />
+                        <rect id="avatar-calf-right" x="106" y="230" width="14" height="50" rx="5" fill="#333" />
+                        <!-- Foot -->
+                        <rect id="avatar-foot-left"  x="74" y="280" width="20" height="12" rx="4" fill="#333" />
+                        <rect id="avatar-foot-right" x="106" y="280" width="20" height="12" rx="4" fill="#333" />
+                    </svg>                    
+                </div>
+
+                <!-- 텍스트 결과 (오른쪽) -->
+                <div class="risk-text" id="risk-output">
+                    아직 예측 결과가 없습니다. Injury History에서 데이터를 입력하고 Predict 버튼을 눌러주세요.
+                </div>
+            </div>
+
+            <div class="bottom-row">
+                <button id="back-from-risk" class="ghost-btn">
+                    Back to Menu
+                </button>
+                <button id="back-to-history" class="secondary-btn">
+                    Edit History
+                </button>
+            </div>
         </div>
     </section>
 
@@ -212,6 +289,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const btnRisk = document.getElementById("btn-risk");
     const backToMenu = document.getElementById("back-to-menu");
     const backFromRisk = document.getElementById("back-from-risk");
+    const backToHistory = document.getElementById("back-to-history");
 
     btnHistory.addEventListener("click", function () {
         showSlide("slide3");
@@ -229,37 +307,123 @@ document.addEventListener("DOMContentLoaded", function () {
         showSlide("slide2");
     });
 
+    backToHistory.addEventListener("click", function () {
+        showSlide("slide3");
+    });
+
     // 3) 세 번째 슬라이드 - 입력/누적/삭제 로직
     const form = document.getElementById("injury-form");
     const tableBody = document.querySelector("#injury-table tbody");
+    const btnPredict = document.getElementById("btn-predict");
 
-    // Enter 눌렀을 때 (form submit)
+    const historyData = []; // {season, injuryType, runningTime, fouled, missedGame, age, position}
+
+    function updatePredictButton() {
+        btnPredict.disabled = historyData.length === 0;
+    }
+
+    function renderHistoryTable() {
+        tableBody.innerHTML = "";
+        historyData.forEach((row, idx) => {
+            const tr = document.createElement("tr");
+            tr.dataset.index = idx.toString();
+
+            const tdX = document.createElement("td");
+            const xBtn = document.createElement("button");
+            xBtn.type = "button";
+            xBtn.textContent = "x";
+            xBtn.className = "delete-row-btn";
+            tdX.appendChild(xBtn);
+            tr.appendChild(tdX);
+
+            const tdSeason = document.createElement("td");
+            tdSeason.textContent = row.season;
+            tr.appendChild(tdSeason);
+
+            const tdInjury = document.createElement("td");
+            tdInjury.textContent = row.injuryType;
+            tr.appendChild(tdInjury);
+
+            const tdRun = document.createElement("td");
+            tdRun.textContent = row.runningTime;
+            tr.appendChild(tdRun);
+
+            const tdFouled = document.createElement("td");
+            tdFouled.textContent = row.fouled;
+            tr.appendChild(tdFouled);
+
+            const tdMissed = document.createElement("td");
+            tdMissed.textContent = row.missedGame;
+            tr.appendChild(tdMissed);
+
+            const tdAge = document.createElement("td");
+            tdAge.textContent = row.age;
+            tr.appendChild(tdAge);
+
+            const tdPos = document.createElement("td");
+            tdPos.textContent = row.position;
+            tr.appendChild(tdPos);
+
+            tableBody.appendChild(tr);
+        });
+
+        updatePredictButton();
+    }
+
     form.addEventListener("submit", function (e) {
         e.preventDefault();
 
         const season = document.getElementById("season").value.trim();
         const injuryType = document.getElementById("injuryType").value.trim();
-        const runningTime = document.getElementById("runningTime").value.trim();
-        const fouled = document.getElementById("fouled").value.trim();
-        const missedGame = document.getElementById("missedGame").value.trim();
-        const age = document.getElementById("age").value.trim();
+        const runningTimeVal = document.getElementById("runningTime").value.trim();
+        const fouledVal = document.getElementById("fouled").value.trim();
+        const missedGameVal = document.getElementById("missedGame").value.trim();
+        const ageVal = document.getElementById("age").value.trim();
         const position = document.getElementById("position").value.trim();
 
-        // 간단한 유효성 검사
         if (
             !season ||
             !injuryType ||
-            !runningTime ||
-            !fouled ||
-            !missedGame ||
-            !age ||
+            !runningTimeVal ||
+            !fouledVal ||
+            !missedGameVal ||
+            !ageVal ||
             !position
         ) {
             alert("모든 값을 입력/선택해주세요.");
             return;
         }
 
-        const key = [
+        const runningTime = Number(runningTimeVal);
+        const fouled = Number(fouledVal);
+        const missedGame = Number(missedGameVal);
+        const age = Number(ageVal);
+
+        if (
+            [runningTime, fouled, missedGame, age].some(
+                (v) => isNaN(v) || v < 0
+            )
+        ) {
+            alert("Running Time / Fouled / Missed Games / Age는 0 이상의 숫자여야 합니다.");
+            return;
+        }
+
+        const exists = historyData.some(
+            (r) =>
+                r.season === season &&
+                r.injuryType === injuryType &&
+                r.runningTime === runningTime &&
+                r.fouled === fouled &&
+                r.missedGame === missedGame &&
+                r.age === age &&
+                r.position === position
+        );
+        if (exists) {
+            alert("same");
+            return;
+        }
+
+        historyData.push({
             season,
             injuryType,
             runningTime,
@@ -267,83 +431,176 @@ document.addEventListener("DOMContentLoaded", function () {
             missedGame,
             age,
             position,
-        ].join("|");
+        });
 
-        // same 체크: 기존 행 중에 동일 key가 있으면 same
-        const rows = tableBody.querySelectorAll("tr");
-        for (const row of rows) {
-            if (row.dataset.key === key) {
-                alert("same");
-                return;
-            }
-        }
+        renderHistoryTable();
 
-        // 새 행 추가
-        const tr = document.createElement("tr");
-        tr.dataset.key = key;
-
-        // X 버튼 셀
-        const tdX = document.createElement("td");
-        const xBtn = document.createElement("button");
-        xBtn.type = "button";
-        xBtn.textContent = "x";
-        xBtn.className = "delete-row-btn";
-        tdX.appendChild(xBtn);
-        tr.appendChild(tdX);
-
-        // Season
-        const tdSeason = document.createElement("td");
-        tdSeason.textContent = season;
-        tr.appendChild(tdSeason);
-
-        // Injury Type
-        const tdInjury = document.createElement("td");
-        tdInjury.textContent = injuryType;
-        tr.appendChild(tdInjury);
-
-        // Running Time
-        const tdRun = document.createElement("td");
-        tdRun.textContent = runningTime;
-        tr.appendChild(tdRun);
-
-        // Fouled
-        const tdFouled = document.createElement("td");
-        tdFouled.textContent = fouled;
-        tr.appendChild(tdFouled);
-
-        // Missed Game
-        const tdMissed = document.createElement("td");
-        tdMissed.textContent = missedGame;
-        tr.appendChild(tdMissed);
-
-        // Age
-        const tdAge = document.createElement("td");
-        tdAge.textContent = age;
-        tr.appendChild(tdAge);
-
-        // Position
-        const tdPos = document.createElement("td");
-        tdPos.textContent = position;
-        tr.appendChild(tdPos);
-
-        tableBody.appendChild(tr);
-
-        // 입력값 초기화 (자주 바뀌는 것들 위주로)
         document.getElementById("runningTime").value = "";
         document.getElementById("fouled").value = "";
         document.getElementById("missedGame").value = "";
-        // age는 같은 선수면 계속 쓸 수 있어서 그대로 두었음
     });
 
-    // X 버튼 눌렀을 때 행 삭제
     tableBody.addEventListener("click", function (e) {
         if (e.target.classList.contains("delete-row-btn")) {
             const row = e.target.closest("tr");
-            if (row) {
-                row.remove();
+            if (!row) return;
+            const idx = Number(row.dataset.index);
+            if (!isNaN(idx)) {
+                historyData.splice(idx, 1);
+                renderHistoryTable();
             }
         }
     });
+
+    // ======== 아바타 색칠 함수 ========
+
+    const riskOutput = document.getElementById("risk-output");
+    const API_BASE = "http://127.0.0.1:8000"; // 로컬 테스트용
+
+    function probToColor(p) {
+        const clamped = Math.max(0, Math.min(1, p));
+        const alpha = 0.2 + clamped * 0.8; // 최소 0.2, 최대 1.0
+        return `rgba(255, 0, 0, ${alpha})`;
+    }
+
+    function resetAvatarColors() {
+        const ids = [
+            "avatar-head",
+            "avatar-body",
+            "avatar-hip",
+            "avatar-arm-left",
+            "avatar-arm-right",
+            "avatar-hamstring-left",
+            "avatar-hamstring-right",
+            "avatar-knee-left",
+            "avatar-knee-right",
+            "avatar-calf-left",
+            "avatar-calf-right",
+            "avatar-foot-left",
+            "avatar-foot-right",
+        ];
+        ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.setAttribute("fill", "#333");
+        });
+    }
+
+    function updateAvatarColors(probs) {
+        resetAvatarColors();
+
+        const headP = probs.head || 0;
+        const armP = probs.arm || 0;
+        const bodyP = probs.body || 0;
+        const hipP = probs.hip || 0;
+        const kneeP = probs.knee || 0;
+        const calfP = probs.calf || 0;
+        const footP = probs.foot || 0;
+        const hamP = probs.hamstring || 0;
+
+        const headEl = document.getElementById("avatar-head");
+        if (headEl) headEl.setAttribute("fill", probToColor(headP));
+
+        const bodyEl = document.getElementById("avatar-body");
+        if (bodyEl) bodyEl.setAttribute("fill", probToColor(bodyP));
+
+        const hipEl = document.getElementById("avatar-hip");
+        if (hipEl) hipEl.setAttribute("fill", probToColor(hipP));
+
+        const armL = document.getElementById("avatar-arm-left");
+        const armR = document.getElementById("avatar-arm-right");
+        if (armL) armL.setAttribute("fill", probToColor(armP));
+        if (armR) armR.setAttribute("fill", probToColor(armP));
+
+        const hamL = document.getElementById("avatar-hamstring-left");
+        const hamR = document.getElementById("avatar-hamstring-right");
+        if (hamL) hamL.setAttribute("fill", probToColor(hamP));
+        if (hamR) hamR.setAttribute("fill", probToColor(hamP));
+
+        const kneeL = document.getElementById("avatar-knee-left");
+        const kneeR = document.getElementById("avatar-knee-right");
+        if (kneeL) kneeL.setAttribute("fill", probToColor(kneeP));
+        if (kneeR) kneeR.setAttribute("fill", probToColor(kneeP));
+
+        const calfL = document.getElementById("avatar-calf-left");
+        const calfR = document.getElementById("avatar-calf-right");
+        if (calfL) calfL.setAttribute("fill", probToColor(calfP));
+        if (calfR) calfR.setAttribute("fill", probToColor(calfP));
+
+        const footL = document.getElementById("avatar-foot-left");
+        const footR = document.getElementById("avatar-foot-right");
+        if (footL) footL.setAttribute("fill", probToColor(footP));
+        if (footR) footR.setAttribute("fill", probToColor(footP));
+    }
+
+    // ======== 백엔드 API 호출 ========
+
+    async function callPredictAPI() {
+        if (historyData.length === 0) {
+            alert("최소 한 개 이상의 히스토리를 입력해주세요.");
+            return;
+        }
+
+        const baseAge = historyData[0].age;
+        const basePosition = historyData[0].position;
+
+        const payload = {
+            age: baseAge,
+            position: basePosition,
+            history: historyData.map((row) => ({
+                season: row.season,
+                games_missed: row.missedGame,
+                fouled: row.fouled,
+                time: row.runningTime,
+            })),
+        };
+
+        riskOutput.textContent = "Predicting...";
+        resetAvatarColors();
+
+        try {
+            const res = await fetch(API_BASE + "/api/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                let detail = "API error";
+                try {
+                    const err = await res.json();
+                    if (err && err.detail) detail = err.detail;
+                } catch (_) {}
+                throw new Error(detail);
+            }
+
+            const data = await res.json();
+            const probs = data.probabilities || {};
+
+            // 텍스트 출력 (오른쪽 패널)
+            const entries = Object.entries(probs).sort((a, b) => b[1] - a[1]);
+            let html = `<div>Season: <b>${data.season}</b></div>`;
+            html += `<div style="margin-top:8px;">prediction:</div>`;
+            html += `<div class="prob-list">`;
+            for (const [part, p] of entries) {
+                const percent = (p * 100).toFixed(1);
+                html += `<div>${part}: ${percent}%</div>`;
+            }
+            html += `</div>`;
+            riskOutput.innerHTML = html;
+
+            // 아바타 색칠
+            updateAvatarColors(probs);
+
+            showSlide("slide4");
+        } catch (err) {
+            console.error(err);
+            riskOutput.textContent =
+                "예측 중 오류가 발생했습니다: " + err.message;
+            showSlide("slide4");
+        }
+    }
+
+    btnPredict.addEventListener("click", callPredictAPI);
 });
 </script>
 </body>
